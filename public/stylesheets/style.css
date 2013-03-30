@@ -1,0 +1,38 @@
+body {
+  padding: 50px;
+  font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
+}
+
+a {
+  color: #00B7FF;
+}
+
+#input {
+  width: 500px;
+}
+#messages {
+/*  position: fixed;
+  top: 400px; 
+  bottom: 8px;
+*/
+  left: 8px;
+  right: 8px;
+  border: 1px solid #EEEEEE;
+  padding: 8px;
+}
+
+#msgui { 
+  width: 200px; 
+  float: right; 
+  border-style: solid;
+}
+
+#actionui { 
+  float: left; 
+  clear: right; 
+  bottom: 10px;  
+  margin-right: 10px; 
+  /* border-style: solid; */
+}
+
+

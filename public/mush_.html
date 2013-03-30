@@ -1,0 +1,273 @@
+    <div id='msgui'>
+    Messages:
+
+    <div id="messages"></div>
+    </div>
+
+    <div id='actionui'>
+    <input type="text" id="input">
+    <br/>
+    <label>Default Commands: 'enter some text' is the same as saying (abrev: /s), /t2 user (talk to user)</label><br/>
+    <label>Commands: /l(ook) name, /g(o) room, /h(elp), /c(lear), /n(ames), /w(ho), /b(uild), /m(ove),...</label>           
+    </div>
+
+    <script src="http://localhost:3000/socket.io/socket.io.js"></script>
+    <script type="text/javascript">
+
+      var msgsEl = $('#messages');
+      var iEl = $('#input');
+      var building = false;
+      var ms = $().mansion;
+
+      function addMsg(msg) {
+        msgsEl.append('<div>'+msg+'</div>');
+        iEl[0].scrollIntoView();
+      }
+
+      var socket = io.connect('http://localhost:3000');
+      socket.on('serverMsg', function(content) {
+        addMsg(content);
+      });
+
+      socket.on('data', function(content) {
+        addMsg(content);
+      });
+
+      socket.on('login', function() {
+        var username = prompt('What username would you like to use?');
+        socket.emit('login', username);
+      });
+
+      function go(args) {
+        socket.emit('go', '/' + args);
+        ms.getText('/' + args, function(txt) {
+          var section = $('#main');
+          section.html(txt);
+        });
+        //location = '/' + args;
+      }
+
+  function find(rm, name) {
+    var s = '';
+    //console.log( 'find: ' + name );
+    for( k in rm ) {
+      if( k == 'name' && rm[k] == name ) {
+        s = rm['desc'];
+      } else if( k == 'part' ) {
+        rm[k].forEach(function(o) { s += find(o, name); });
+      }
+    }
+    return s;
+  }      
+      
+      function look(args) {
+        var s;
+        if(args != '') { 
+          s = find(ms.rm, args);
+          //console.log('returning from find');
+          addMsg('You see: ' + s);
+        } else {
+          //console.log('look rm: ' + ms.rm.toString() );
+          s = ms.look(ms.rm);
+          addMsg('You see: ' + s);
+        }
+      }
+      
+      function names(args) {
+        var s;
+        if(args) {
+          s = ms.names(eval(args));          
+        } else { 
+          s = ms.names(ms.rm);
+        }
+        addMsg(s);
+      }
+
+      function help(args) {
+        var info = '';
+        if( args == '' ) {
+          info = 'type: /h cmd for more info on command "cmd", possible cmd values are: ' +
+            'l, s, g, c, b, r, roff, n, w';
+        } else {
+          switch(args) {
+            case 'l': case 'look':
+              info = 'l or look without an argument will display the ' +
+                'description of the objects in the room; with an argument that ' +
+                'is the name of an object, will display its description. ' +
+                'use /n to see the list of names';
+              break;
+            case 's': case 'say':
+              info = 'default command; broadcast the rest of the line to everyone ' +
+                'in the room. If the input line does not start with a /, this command is used';
+              break;
+            case 'g': case 'go':
+              info = 'go to another room, possible values for room are: lab, library, chapel, ' +
+                'conference, office, living, room';
+              break;
+            case 'c': case 'clear':
+              info = 'clear the messages list';
+              break;
+            case 'b': case 'build':
+              info = 'start a basic eval prompt, console.log($().mansion.rm."obj") ' +
+                'where obj is the name of an object, is a good way to explore the environment';
+              break;
+            case 'r': case 'record':
+              info = 'start recording every message in local storage';
+              break;
+            case 'roff':
+              info = 'stop recording messages';
+              break;
+            case 'n': case 'names':
+              info = 'list the names of the objects in the room or the argument given';
+              break;
+            case 'w': case 'who':
+              info = 'list the users in the room';
+              break;
+            default:
+              info = 'unknown (or not yet implemented) command';
+          }
+        }
+        addMsg('help: ' + info);
+      }
+
+      function build() {
+        iEl.val('> ');
+        building = true;
+      }
+      
+      function move( args ) {
+        var a = args.split(' ');
+        console.log(a);
+        var obj = a[0], from = eval('$().mansion.rm.'+a[1]), to = eval('$().mansion.rm.'+a[2]); 
+        for(k in from.part) {
+          console.log('looking for object');
+          if( from.part[k].name == obj ) {
+            addMsg('Moving ' + args);
+            to.part.push(from.part[k]);
+            from.part.splice(k,1);
+          }
+        }
+      }
+ 
+      socket.on('change', function(args) {
+        move(args);
+      });
+
+      function sendCmd(command, args) {
+        switch(command) {
+          case 'g' : case 'go': 
+            go(args);
+            break;
+          case 'l' : case 'look': 
+            //console.log( 'calling look with args: ' + args);
+            look(args);
+            break;
+          case 's': case 'say':
+            socket.emit('clientMsg', args);  
+            break;          
+          case 't2': case 'talkto':
+            addMsg( 'info: talkto TBD' );
+            socket.emit('talkto', args);
+            break;
+          case 'h': case 'help':
+            help(args);
+            break;
+          case 'p': case 'pick':
+            addMsg( 'info: pick TBD' );
+            socket.emit('take', args);
+            break;
+          case 'd': case 'drop':
+            addMsg( 'info: drop TBD' );
+            socket.emit('drop', args);
+            break;
+          case 'n': case 'names':
+            if(args) addMsg( 'info: cannot pass arguments to names yet' );
+            names(args);
+            break;
+          case 'w': case 'who':
+            socket.emit('who', args);
+            break;
+          case 'u': case 'users':
+            addMsg( 'info: users TBD' );
+            socket.emit('use', args);
+            break;
+          case 'b': case 'build':
+            build();
+            socket.emit('clientMsg', 'I start building');
+            break;
+          case 'c': case 'clear':
+            msgsEl.html('');
+            break;
+          case 'm': case 'move':
+            move(args);
+            socket.emit('change', args);
+            break;
+          case 'r':
+            start();
+            break;
+          case 'roff':
+            stop();
+            break;
+          default:
+            alert('actions must start with /: ' + command);
+        }
+      }
+
+	var str = '';
+	function addm(m) {
+	    str = str + '\n' +  m;
+	}
+
+	function start() {
+	  str = '';
+	  socket.emit('clientMsg', 'The Recorder is turned on');
+	  socket.on('serverMsg', addm);
+	}
+
+	function stop() {
+	  localStorage.recording = str;
+	  socket.emit('clientMsg', 'The Recorder is turned off');
+	  socket.removeListener('serverMsg', addm);
+	}
+
+
+      function sendMsg(msg) {
+        var cMatch = msg.match(/^\/(\w*)(.*)/);
+        if (cMatch) {
+          sendCmd(cMatch[1], cMatch[2].trim());
+        } else {
+          socket.emit('clientMsg', msg);  
+        }        
+      }
+
+      function reval() {
+        var strip = iEl.val().slice(1).trim();
+        console.log( 'strip: ' + strip);
+        if( strip == '.exit' ) {
+          iEl.val(''); 
+          socket.emit('clientMsg', 'Stop building');
+          building = false;
+        } else { // !.exit
+          var str = eval(strip);
+          addMsg(str);
+          iEl.val('> ');
+        }
+      }
+
+      iEl.keyup(function(evt) {
+        //console.log( evt.which );
+        if (evt.which === 13) {
+          //console.log('iEl.val: ' + iEl.val());
+          if(!building) {
+            sendMsg(iEl.val());
+            !building ? iEl.val('') : iEl.val('> '); // sendMsg might set building
+            return false;
+          } else { // we are building
+            reval();
+            return false;
+          }
+        } else {
+          return true;
+        }
+      });
+    </script>

@@ -1,0 +1,15 @@
+{
+  "name": "mansionjs",
+  "version": "0.0.2",
+  "private": true,
+  "homepage": "https://github.com/eosrc/mansionjs",
+  "scripts": {
+    "start": "node app"
+  },
+  "dependencies": {
+    "express": "3.*",
+    "connect": "*",
+    "socket.io": "*",
+    "session.socket.io": "*"
+  }
+}
