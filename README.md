@@ -37,11 +37,21 @@ the main entrance, and the mansion basement (TBD).
 Installation
 ------------
 
-You need to have [node][1] installed. Then (git) clone this
-repository (grab the zip archive, if you don't have/want git).
-Then in your local project directory: *npm install*. After npm
-finished downloading its stuff, type: *node app* and open your
-browser at: *http://localhost:3000*. 
+You need to have [node][1] installed. 
+
+Then (git) clone this repository (grab the zip archive, if you don't have/want git).
+In your local project directory: 
+
+```
+npm install 
+```
+
+After npm finished downloading its stuff, type: 
+
+```
+node app
+```
+and open your browser at: *http://localhost:3000*. 
 
 If you run it on a network (instead of just testing it locally),
 you'll have to change the two references to "localhost", in the
