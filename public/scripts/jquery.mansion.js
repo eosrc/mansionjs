@@ -2,7 +2,8 @@
 
 (function () {
 
-  var rm;
+  var rm, state = {};
+  
   function getText(url, callback) {
     var request = new XMLHttpRequest();
     request.open("GET", url);
@@ -98,6 +99,7 @@
 
   
   var ftable = { rm: rm,
+              state: state,
               go: go,
               getText: getText, 
               view: view,

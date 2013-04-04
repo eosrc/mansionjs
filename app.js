@@ -4,13 +4,16 @@ var express = require('express')
   , routes = require('./routes/index')(mansion)
   , http = require('http')
   , path = require('path')
-  , location = {}
+  , state = {}
   , users = require('./data/users').users;
 
 var app = express();
 
 var cookieParser = express.cookieParser('shhhh, very secret');
 var sessionStore = new connect.middleware.session.MemoryStore();
+
+  state.location = {}
+  state.users = []
 
 app.configure(function(){
   app.set('port', process.env.PORT || 3000);
@@ -47,6 +50,7 @@ app.get('/leave', function(req, res){
   req.session.destroy(function(){
     res.redirect('/');
   });
+  // should delete from state.users if not done already
 });
 
 app.get('/enter', function(req, res){
@@ -62,13 +66,14 @@ app.post('/enter', function(req, res){
         // Store the user's primary key 
         // in the session store to be retrieved,
         // or in this case the entire user object
-        location[user.name] = '';
+        state.location[user.name] = '';
         req.session.user = user;
         req.session.success = 'Authenticated as ' + user.name
           + ' click to <a href="/logout">logout</a>. '
           + ' You may now access <a href="/restricted">/restricted</a>.';
         res.redirect('/restricted');
       });
+      state.users.push(user);
     } else {
       req.session.error = 'Authentication failed, please check your '
         + ' username and password.'
@@ -107,5 +112,5 @@ var httpd = http.createServer(app).listen(port, function(){
 var io = require('socket.io').listen(httpd);
 
 var ssio = require('./mush').ssio;
-ssio( {svr:io, store: sessionStore, parser: cookieParser, location: location});
+ssio( {svr:io, store: sessionStore, parser: cookieParser, state: state });
 

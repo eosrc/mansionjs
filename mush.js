@@ -3,8 +3,10 @@ var sessionSockets;
 
 exports.ssio = function(options) {
 
-  sessionSockets = new SessionSockets(options.svr, options.store, options.parser);
-  location = options.location;
+  var sessionSockets = new SessionSockets(options.svr, options.store, options.parser);
+  var state = options.state;
+  var location = options.state.location;
+  var users = options.state.users;
 
 sessionSockets.on('connection', function (err, socket, session) {
   socket.on('clientMsg', function(content) {
@@ -47,6 +49,9 @@ sessionSockets.on('connection', function (err, socket, session) {
         var user = session.user,
         username = user.name; //socket.id;
         delete location[user.name];
+        for( k in users ) {
+          if( users[k].name == username ) delete users[k]; 
+        }
       //}
       socket.broadcast.emit('serverMsg', 'User ' + username +
         ' disconnected');
@@ -88,7 +93,11 @@ sessionSockets.on('connection', function (err, socket, session) {
       broadcast.emit('change', args);
     });
   })
-  
+
+  socket.on('state', function(key) {
+    socket.emit('state', key, JSON.stringify(state[key]));    
+  })
+    
   socket.on('who', function() {
     var str = '', room, k;
     if (session.user) {

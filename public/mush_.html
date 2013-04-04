@@ -11,20 +11,21 @@
     <label>Commands: /l(ook) name, /g(o) room, /h(elp), /c(lear), /n(ames), /w(ho), /b(uild), /m(ove),...</label>           
     </div>
 
-    <script src="http://localhost:3000/socket.io/socket.io.js"></script>
+    <script src="http://67.70.147.205:3000/socket.io/socket.io.js"></script>
     <script type="text/javascript">
 
       var msgsEl = $('#messages');
       var iEl = $('#input');
       var building = false;
       var ms = $().mansion;
+      var state = $().mansion.state;
 
       function addMsg(msg) {
         msgsEl.append('<div>'+msg+'</div>');
         iEl[0].scrollIntoView();
       }
 
-      var socket = io.connect('http://localhost:3000');
+      var socket = io.connect('http://67.70.147.205:3000');
       socket.on('serverMsg', function(content) {
         addMsg(content);
       });
@@ -138,7 +139,10 @@
       function move( args ) {
         var a = args.split(' ');
         console.log(a);
-        var obj = a[0], from = eval('$().mansion.rm.'+a[1]), to = eval('$().mansion.rm.'+a[2]); 
+        var obj = a[0], from, to, e1, e2;
+        try { e1 = eval(a[1]); e2 = eval(a[2]); } catch(exception) {}
+        ( e1 && e1.part instanceof Array) ? from = e1 : from = eval('$().mansion.rm.'+a[1]); 
+        ( e2 && e2.part instanceof Array) ? to = e2 : to = eval('$().mansion.rm.'+a[2]); 
         for(k in from.part) {
           console.log('looking for object');
           if( from.part[k].name == obj ) {
@@ -151,6 +155,14 @@
  
       socket.on('change', function(args) {
         move(args);
+      });
+      
+      function stateVal(key) {
+        socket.emit('state', key);
+      }
+      
+      socket.on('state', function(key, value) {
+        state[key] = JSON.parse(value);
       });
 
       function sendCmd(command, args) {
@@ -174,7 +186,7 @@
             break;
           case 'p': case 'pick':
             addMsg( 'info: pick TBD' );
-            socket.emit('take', args);
+            socket.emit('pick', args);
             break;
           case 'd': case 'drop':
             addMsg( 'info: drop TBD' );
@@ -201,6 +213,9 @@
           case 'm': case 'move':
             move(args);
             socket.emit('change', args);
+            break;
+          case 'v':
+            stateVal(args);
             break;
           case 'r':
             start();
