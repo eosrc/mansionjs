@@ -25,7 +25,6 @@
         iEl[0].scrollIntoView();
       }
 
-      //var socket = io.connect('http://67.70.147.205:3000');
       var socket = io.connect('http://localhost:3000');
       socket.on('serverMsg', function(content) {
         addMsg(content);
@@ -76,7 +75,7 @@
       }
       
       function names(args) {
-        var s;
+        var s = '';
         if(args) {
           try { s = ms.names(eval(args)); } catch(exception) {}
           if( s == '' || s == 'undefined' ) { s = ms.names(eval('$().mansion.rm.'+args)); }       
