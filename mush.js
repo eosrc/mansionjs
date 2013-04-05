@@ -44,7 +44,7 @@ sessionSockets.on('connection', function (err, socket, session) {
   
 
   socket.on('disconnect', function() {
-    //socket.get('username', function(err, username) {
+    //socket.get('username', function(err, username)  ) 
       if (session && session.user) {
         var user = session.user,
         username = user.name; //socket.id;
@@ -52,7 +52,6 @@ sessionSockets.on('connection', function (err, socket, session) {
         for( k in users ) {
           if( users[k].name == username ) delete users[k]; 
         }
-      //}
       socket.broadcast.emit('serverMsg', 'User ' + username +
         ' disconnected');
     }
@@ -92,12 +91,23 @@ sessionSockets.on('connection', function (err, socket, session) {
       broadcast.to(room);
       broadcast.emit('change', args);
     });
-  })
+  });
+
+  socket.on('talkto', function(u, m) {
+    socket.broadcast.emit('talkto', u, m, session.user.name);
+    socket.emit('serverMsg', 'You tell '+u+': '+m);
+  });
 
   socket.on('state', function(key) {
     socket.emit('state', key, JSON.stringify(state[key]));    
-  })
-    
+  });
+
+  socket.on('username', function() {
+    var n;
+    (session && session.user) ? n = session.user.name : n = 'undefined';
+    socket.emit('username', n);    
+  });
+      
   socket.on('who', function() {
     var str = '', room, k;
     if (session.user) {
