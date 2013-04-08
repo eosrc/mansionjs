@@ -14,11 +14,13 @@
     <script src="http://localhost:3000/socket.io/socket.io.js"></script>
     <script type="text/javascript">
 
-      var msgsEl = $('#messages');
-      var iEl = $('#input');
-      var building = false;
-      var ms = $().mansion;
-      var state = $().mansion.state;
+      var msgsEl = $('#messages'),
+        iEl = $('#input'),
+        building = false,
+        ms = $().mansion,
+        state = $().mansion.state,
+        gow = ['lab','library','chapel','conference','living','office','room'];
+      
 
       iEl[0].focus();
       
@@ -27,7 +29,7 @@
         iEl[0].scrollIntoView();
       }
 
-      var socket = io.connect('http://localhost:3000');
+      var socket = io.connect('http://localhost:3000');      
       socket.on('serverMsg', function(content) {
         addMsg(content);
       });
@@ -42,12 +44,15 @@
       });
 
       function go(args) {
-        socket.emit('go', '/' + args);
-        ms.getText('/' + args, function(txt) {
-          var section = $('#main');
-          section.html(txt);
-        });
-        //location = '/' + args;
+        if( gow.indexOf(args) != -1 ) {
+          socket.emit('go', '/' + args);
+          ms.getText('/' + args, function(txt) {
+            var section = $('#main');
+            section.html(txt);
+          });
+        } else {
+          addMsg("You can't go there");
+        }
       }
 
   function find(rm, name) {
@@ -63,10 +68,10 @@
     return s;
   }      
       
-      function look(args) {
+      function look(name) {
         var s;
-        if(args != '') { 
-          s = find(ms.rm, args);
+        if(name != '') { 
+          s = find(ms.rm, name);
           //console.log('returning from find');
           addMsg('You see: ' + s);
         } else {
@@ -140,8 +145,8 @@
       }
       
       function move( args ) {
-        var a = args.split(' ');
-        console.log(a);
+        var a = args.split(/\s+/);
+        //console.log('move args: ' + args);
         var obj = a[0], from, to, e1, e2;
         try { e1 = eval(a[1]); } catch(exception) {}
         try { e2 = eval(a[2]); } catch(exception) {}
@@ -166,7 +171,25 @@
       });
  
       socket.on('change', function(args) {
-        move(args);
+        var a = args.split(/\s+/);
+        console.log('change: ' + args);
+          switch(a[0]) {
+            case 'move':
+              move(a[1] + ' ' + a[2] + ' ' + a[3]);
+              addMsg('by ' + a[5]);
+              break;
+            case 'pick':
+              //console.log('call broadcasted pick');
+              preMove(callMove, a[1], a[2], null, true, a[4]);
+              addMsg('by ' + a[4]);
+              break;
+            case 'drop':
+              preMove(callMove, a[1], null, a[2], true, a[4]);
+              addMsg('by ' + a[4]);
+              break;
+            default:
+              addMsg('could not decode broadcasted change');
+          }
       });
       
       function stateVal(key) {
@@ -176,14 +199,94 @@
       socket.on('state', function(key, value) {
         state[key] = JSON.parse(value);
       });
+
+      function uListing() {
+        var s = '';
+        if(state.users) {
+          state.users.forEach(function(u) {  s += u.name + ' '; });
+          addMsg('The online users are: ' + s);
+        } else {
+          socket.on('state', function(key, value) {
+            state[key] = JSON.parse(value);
+            state.users.forEach(function(u) {  s += u.name + ' '; });
+            addMsg('The online users are: ' + s);
+          });
+          socket.emit('state', 'users');
+        }
+      }
       
       function username() {
         socket.emit('username');
       }
 
       socket.on('username', function(name) {
+        console.log( 'retrieved un: ' + name );
         state.username = name;
       });
+
+      function preMove(fn, o, f, t, b, u) {
+        var needs = {}
+        if( !state.users ) { needs.users = true; }
+        if( !state.username ) { needs.username = true; }
+        if( !needs.users && !needs.username ) 
+          { fn(o,f,t,b,u); }
+        else if( needs.users && !needs.username ) {
+          socket.on('state', function(key, value) {
+            state[key] = JSON.parse(value);
+            fn(o,f,t,b,u);
+          });
+          socket.emit('state', 'users');
+        }
+        else if( !needs.users && needs.username ) {
+          socket.on('username', function(name) {
+            state.username = name;
+            fn(o,f,t,b,u);
+          });
+          socket.emit('username');
+        } else {
+          //console.log('emiting un & users');
+          socket.on('username', function(name) {
+            state.username = name;
+            if( state.users ) fn(o,f,t,b,u);
+          });
+          socket.on('state', function(key, value) {
+            state[key] = JSON.parse(value);
+            if( state.username ) fn(o,f,t,b,u);
+          });
+          socket.emit('username');
+          socket.emit('state', 'users');
+        }
+      }
+
+      function pick( obj, from) {
+        preMove(callMove, obj, from, null, false, '');  
+      }
+
+      function drop( obj, to) {
+        // if no coll, drop in the room
+        if( to == '' || to == 'undefined' ) { to = '$().mansion.rm'; }
+        preMove(callMove, obj, null, to, false, '');
+      }
+      
+      function callMove( obj, from, to, broadcast, username ) {
+        var idx = -1, name;
+        console.log('inside callMove');
+        if( !state.users ) { console.log('something is wrong: no users'); }
+        if( !state.username ) { console.log('something is wrong: no username'); }
+        broadcast ?  name = username : name = state.username;
+        for( i = 0; i < state.users.length; i++ ) {
+          if( name == state.users[i].name ) { 
+            idx = i; 
+          }
+          console.log( name + ' ' + state.users[i].name);
+        }
+        console.log('obj coll idx: ' + obj + from + idx.toString());
+        if( idx != -1 ) {
+          if( ! state.users[idx].part)  { state.users[idx].part = []; }
+          if( from )  { move( obj.trim() + ' ' + from.trim() + ' state.users[' + idx.toString() + ']'); }
+          if( to )  { move( obj.trim() + ' state.users[' + idx.toString() + '] ' + to.trim()); }
+        }
+      }
 
       function sendCmd(command, args) {
         switch(command) {
@@ -205,23 +308,30 @@
             help(args);
             break;
           case 'p': case 'pick':
-            addMsg( 'info: pick TBD' );
-            socket.emit('pick', args);
+            var a = args.match(/(\w+)(.*)/);
+            if(a) { 
+              try { pick(a[1], a[2]); } catch(exception) {}
+              console.log('about to tell server changes');
+              //socket.emit('change', 'pick ' + a[1] + ' ' + a[2]); 
+              socket.emit('change', 'pick ' + args); 
+            }
             break;
           case 'd': case 'drop':
-            addMsg( 'info: drop TBD' );
-            socket.emit('drop', args);
+            var a = args.match(/(\w+)(.*)/);
+            if(a) { 
+              try { drop(a[1], a[2]); } catch(exception) {}
+              socket.emit('change', 'drop ' + args);
+            }
             break;
           case 'n': case 'names':
-            if(args) addMsg( 'info: cannot pass arguments to names yet' );
+            //if(args) addMsg( 'info: cannot pass arguments to names yet' );
             names(args);
             break;
           case 'w': case 'who':
             socket.emit('who', args);
             break;
           case 'u': case 'users':
-            addMsg( 'info: users TBD' );
-            socket.emit('use', args);
+            uListing();
             break;
           case 'b': case 'build':
             build();
@@ -232,7 +342,7 @@
             break;
           case 'm': case 'move':
             move(args);
-            socket.emit('change', args);
+            socket.emit('change', 'move ' +  args);
             break;
           case 'v':
             stateVal(args);
@@ -244,7 +354,7 @@
             stop();
             break;
           default:
-            alert('actions must start with /: ' + command);
+            addMsg('actions must start with /: ' + command);
         }
       }
 

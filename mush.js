@@ -87,9 +87,12 @@ sessionSockets.on('connection', function (err, socket, session) {
   socket.on('change', function(args) {
     socket.get('room', function(err, room) {
       if (err) { throw err; }
+      console.log('broadcast change: (next line) ' );
+      console.log( args + ' true ' + session.user.name);
+      var n = session.user.name;
       var broadcast = socket.broadcast;
       broadcast.to(room);
-      broadcast.emit('change', args);
+      broadcast.emit('change', args + ' true ' + n);
     });
   });
 

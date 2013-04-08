@@ -40,7 +40,7 @@ function restrict(req, res, next) {
   }
 }
 
-app.get('/restricted', restrict, function(req, res){
+app.get('/interior', restrict, function(req, res){
   res.sendfile(__dirname + '/public/main.html');
 });
 
@@ -68,10 +68,7 @@ app.post('/enter', function(req, res){
         // or in this case the entire user object
         state.location[user.name] = '';
         req.session.user = user;
-        req.session.success = 'Authenticated as ' + user.name
-          + ' click to <a href="/logout">logout</a>. '
-          + ' You may now access <a href="/restricted">/restricted</a>.';
-        res.redirect('/restricted');
+        res.redirect('/interior');
       });
       state.users.push(user);
     } else {
