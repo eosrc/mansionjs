@@ -91,7 +91,7 @@ by Teixeira.
 License
 -------
 
-TDB
+Apache License 2.0
 
 [1]: http://nodejs.org
 [2]: https://github.com/LearnBoost/socket.io/wiki/Socket.IO-and-firewall-software
